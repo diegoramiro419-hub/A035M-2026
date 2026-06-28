@@ -1,0 +1,170 @@
+name: Recovery Patcher 2026
+
+on:
+  workflow_dispatch:
+    inputs:
+      RECOVERY_URL:
+        description: "Direct URL to recovery.img or recovery.img.lz4"name: Recovery Patcher 2026
+
+on:
+  workflow_dispatch:
+    inputs:
+      RECOVERY_URL:
+        description: "Direct URL to recovery.img or recovery.img.lz4"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  WORK_DIR: work
+  FILES_DIR: files
+  OUTPUT_DIR: output
+  LOG_DIR: logs
+
+jobs:
+  patch:
+    name: Samsung A035M Android 13
+    runs-on: ubuntu-24.04
+
+    steps:
+
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Create Workspace
+      run: |
+        mkdir -p "$WORK_DIR"
+        mkdir -p "$OUTPUT_DIR"
+        mkdir -p "$LOG_DIR"
+
+    - name: Install Packages
+      run: |
+        sudo apt-get update
+
+        sudo apt-get install -y \
+          wget \
+          curl \
+          unzip \
+          zip \
+          lz4 \
+          tar \
+          xz-utils \
+          file \
+          git \
+          openssl \
+          python3 \
+          python3-pip
+
+    - name: Download Tools
+      run: |
+        chmod +x files/download_tools.sh
+        ./files/download_tools.sh
+
+    - name: Download Recovery
+      run: |
+        wget "${{ github.event.inputs.RECOVERY_URL }}" \
+        -O work/recovery.img
+
+    - name: Prepare Image
+      run: |
+        chmod +x files/script1.sh
+        ./files/script1.sh work/recovery.img
+
+    - name: Patch Recovery
+      run: |
+        chmod +x files/script2.sh
+        ./files/script2.sh
+
+    - name: Build Log
+      run: |
+        chmod +x files/buildlog.sh
+        ./files/buildlog.sh
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Recovery-Patcher
+        path: |
+          output/**
+          logs/**
+
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  WORK_DIR: work
+  FILES_DIR: files
+  OUTPUT_DIR: output
+  LOG_DIR: logs
+
+jobs:
+  patch:
+    name: Samsung A035M Android 13
+    runs-on: ubuntu-24.04
+
+    steps:
+
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Create Workspace
+      run: |
+        mkdir -p "$WORK_DIR"
+        mkdir -p "$OUTPUT_DIR"
+        mkdir -p "$LOG_DIR"
+
+    - name: Install Packages
+      run: |
+        sudo apt-get update
+
+        sudo apt-get install -y \
+          wget \
+          curl \
+          unzip \
+          zip \
+          lz4 \
+          tar \
+          xz-utils \
+          file \
+          git \
+          openssl \
+          python3 \
+          python3-pip
+
+    - name: Download Tools
+      run: |
+        chmod +x files/download_tools.sh
+        ./files/download_tools.sh
+
+    - name: Download Recovery
+      run: |
+        wget "${{ github.event.inputs.RECOVERY_URL }}" \
+        -O work/recovery.img
+
+    - name: Prepare Image
+      run: |
+        chmod +x files/script1.sh
+        ./files/script1.sh work/recovery.img
+
+    - name: Patch Recovery
+      run: |
+        chmod +x files/script2.sh
+        ./files/script2.sh
+
+    - name: Build Log
+      run: |
+        chmod +x files/buildlog.sh
+        ./files/buildlog.sh
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Recovery-Patcher
+        path: |
+          output/**
+          logs/**

@@ -7,9 +7,14 @@ Samsung-Recovery-Patcher/
 ├── files/
 │   ├── script1.sh
 │   ├── script2.sh
-│   ├── magiskboot
-│   ├── avbtool.py
-│   └── phh.pem        (opcional)
+│   ├── download_tools.sh
+│   ├── detect_image.sh
+│   ├── buildlog.sh
+│   └── tools.json
 │
 ├── output/
 │
+├── logs/
+│   └── build.log
+│
+└── README.md

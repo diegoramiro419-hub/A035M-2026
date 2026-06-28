@@ -4,82 +4,97 @@ on:
   workflow_dispatch:
     inputs:
       RECOVERY_URL:
-        description: "Direct URL to recovery.img or recovery.img.lz4"
+        description: "Recovery Image URL (.img o .img.lz4)"
         required: true
-        type: string
 
 permissions:
   contents: write
 
-env:
-  WORK_DIR: work
-  FILES_DIR: files
-  OUTPUT_DIR: output
-  LOG_DIR: logs
-
 jobs:
   patch:
-    name: Samsung A035M Android 13
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
 
     steps:
 
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Create Workspace
-      run: |
-        mkdir -p "$WORK_DIR"
-        mkdir -p "$OUTPUT_DIR"
-        mkdir -p "$LOG_DIR"
-
-    - name: Install Packages
+    - name: Install Dependencies
       run: |
         sudo apt-get update
-
         sudo apt-get install -y \
-          wget \
           curl \
-          unzip \
-          zip \
+          wget \
           lz4 \
           tar \
-          xz-utils \
-          file \
-          git \
           openssl \
           python3 \
-          python3-pip
+          file
+
+    - name: Create Directories
+      run: |
+        mkdir -p work
+        mkdir -p output
+        mkdir -p logs
+
+    - name: Download Recovery
+      run: |
+        wget "${{ github.event.inputs.RECOVERY_URL }}" \
+          -O recovery.img
 
     - name: Download Tools
       run: |
         chmod +x files/download_tools.sh
         ./files/download_tools.sh
 
-    - name: Download Recovery
-      run: |
-        wget "${{ github.event.inputs.RECOVERY_URL }}" \
-        -O work/recovery.img
-
     - name: Prepare Image
       run: |
         chmod +x files/script1.sh
-        ./files/script1.sh work/recovery.img
+        ./files/script1.sh recovery.img
 
     - name: Patch Recovery
       run: |
         chmod +x files/script2.sh
         ./files/script2.sh
 
-    - name: Build Log
+    - name: Sign Recovery (AVB)
+      run: |
+        python3 files/avbtool.py extract_public_key \
+          --key files/phh.pem \
+          --output files/phh.pub.bin
+
+        python3 files/avbtool.py add_hash_footer \
+          --image output/recovery.img \
+          --partition_name recovery \
+          --partition_size $(stat -c%s output/recovery.img) \
+          --key files/phh.pem \
+          --algorithm SHA256_RSA4096
+
+    - name: Create Odin TAR
+      run: |
+        mkdir -p release
+
+        cp output/recovery.img release/recovery.img
+
+        cd release
+
+        tar -H ustar -cf fastbootd-recovery.tar recovery.img
+
+        md5sum -t fastbootd-recovery.tar >> fastbootd-recovery.tar
+
+        mv fastbootd-recovery.tar fastbootd-recovery.tar.md5
+
+    - name: Generate Build Log
       run: |
         chmod +x files/buildlog.sh
         ./files/buildlog.sh
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
+    - name: Upload Release
+      uses: softprops/action-gh-release@v2
       with:
-        name: Recovery-Patcher
-        path: |
-          output/**
-          logs/**
+        tag_name: recovery-${{ github.run_number }}
+        name: Recovery Patcher 2026 Build #${{ github.run_number }}
+        generate_release_notes: true
+        files: |
+          release/fastbootd-recovery.tar.md5
+          logs/build.log

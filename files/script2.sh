@@ -19,6 +19,10 @@ mkdir -p "$LOG_DIR"
 
 LOG_FILE="$LOG_DIR/build.log"
 
+############################################
+# Logging
+############################################
+
 log() {
     echo "[$(date '+%F %T')] $*" | tee -a "$LOG_FILE"
 }
@@ -37,7 +41,7 @@ apply_patch() {
     local OLD_HEX="$1"
     local NEW_HEX="$2"
 
-    log "Applying patch..."
+    log "Applying patch: ${OLD_HEX:0:8}..."
 
     if "$MAGISKBOOT" hexpatch system/bin/recovery \
         "$OLD_HEX" \
@@ -57,9 +61,10 @@ apply_patch() {
 ############################################
 
 MAGISKBOOT="$TOOLS_DIR/magiskboot"
+AVBTOOL="$TOOLS_DIR/avbtool.py"
 
 [ -x "$MAGISKBOOT" ] || die "magiskboot not found."
-
+[ -f "$AVBTOOL" ] || die "avbtool.py not found."
 [ -f "$WORK_DIR/r.img" ] || die "r.img not found."
 
 ############################################
@@ -75,7 +80,9 @@ cd unpack
 
 log "Unpacking recovery image..."
 
-"$MAGISKBOOT" unpack ../r.img
+if ! "$MAGISKBOOT" unpack ../r.img; then
+    die "Unable to unpack recovery image."
+fi
 
 ############################################
 # Detect Ramdisk
@@ -112,7 +119,9 @@ log "Ramdisk detected: $ramdisk"
 
 log "Extracting ramdisk..."
 
-"$MAGISKBOOT" cpio "$ramdisk" extract
+if ! "$MAGISKBOOT" cpio "$ramdisk" extract; then
+    die "Unable to extract ramdisk."
+fi
 
 ############################################
 # Verify Recovery Binary
@@ -152,6 +161,12 @@ apply_patch "41010054a0020012f44f48a9" "4101005420008052f44f48a9"
 log "All patches processed."
 
 ############################################
+# Verify Patched Binary
+############################################
+
+[ -f system/bin/recovery ] || die "Patched recovery binary missing."
+
+############################################
 # Update Ramdisk
 ############################################
 
@@ -166,16 +181,23 @@ log "Updating ramdisk..."
 
 log "Repacking recovery..."
 
-"$MAGISKBOOT" repack ../r.img recovery-new.img
+if ! "$MAGISKBOOT" repack ../r.img recovery-new.img; then
+    die "Unable to repack recovery."
+fi
 
-[ -f recovery-new.img ] || die "Repack failed."
+############################################
+# Verify Output
+############################################
+
+[ -s recovery-new.img ] || die "Repacked image is empty."
 
 ############################################
 # Save Output
 ############################################
 
-cp recovery-new.img "$OUTPUT_DIR/recovery-patched.img"
+cp recovery-new.img "$OUTPUT_DIR/recovery.img"
 
-log "Patched recovery saved."
+log "Patched recovery saved:"
+log "$OUTPUT_DIR/recovery.img"
 
 log "Stage 2 completed successfully."

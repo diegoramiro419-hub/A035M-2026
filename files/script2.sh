@@ -28,18 +28,36 @@ die() {
     exit 1
 }
 
+############################################
+# Apply Hex Patch
+############################################
+
+apply_patch() {
+
+    local OLD_HEX="$1"
+    local NEW_HEX="$2"
+
+    log "Applying patch..."
+
+    if "$MAGISKBOOT" hexpatch system/bin/recovery \
+        "$OLD_HEX" \
+        "$NEW_HEX"; then
+
+        log "[OK] Patch applied."
+
+    else
+
+        log "[WARN] Pattern not found (ignored)."
+
+    fi
+}
+
+############################################
+# Variables
+############################################
+
 MAGISKBOOT="$TOOLS_DIR/magiskboot"
 
 [ -x "$MAGISKBOOT" ] || die "magiskboot not found."
 
 [ -f "$WORK_DIR/r.img" ] || die "r.img not found."
-
-cd "$WORK_DIR"
-
-rm -rf unpack
-mkdir unpack
-cd unpack
-
-log "Unpacking recovery..."
-
-"$MAGISKBOOT" unpack ../r.img
